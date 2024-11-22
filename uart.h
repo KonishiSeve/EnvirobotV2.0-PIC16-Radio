@@ -10,8 +10,6 @@
 
 #include <xc.h>
 
-void uart_init(void);
-void uart_write(uint8_t data);
 
 #endif	/* UART_H */
 

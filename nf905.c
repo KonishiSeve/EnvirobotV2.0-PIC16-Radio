@@ -1,5 +1,5 @@
 #include "nrf905.h"
-#include "spi.h"
+#include "peripherHAL.h"
 #include "utilities.h"
 
 //Pins for the radio
