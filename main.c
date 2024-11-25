@@ -76,6 +76,7 @@ void __interrupt() main_isr(void) {
     }
 }
 
+// ===== Radio Handler ===== //
 //called when a request is received from the radio
 void handler_radio(void) {
     //decode the radio packet

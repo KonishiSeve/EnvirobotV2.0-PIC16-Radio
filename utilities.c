@@ -24,10 +24,10 @@ void delay_us(uint32_t delay_us) {
     
     uint32_t overflow = 0;  //counts the timer2 overflows
     //convert delay to timer ticks
-    uint32_t target_ticks = (delay_us*1000)/(TIMR2_TICK_PERIOD_NS);
+    uint32_t target_ticks = (uint32_t)((delay_us*1000)/(TIMR2_TICK_PERIOD_NS));
     //convert target ticks to number of overflows + timer value
     uint32_t target_overflow = target_ticks/0xFF;
-    uint8_t target_timer = target_ticks - target_overflow*0xFF;
+    uint8_t target_timer = (uint8_t)(target_ticks - target_overflow*0xFF);
     
     while(overflow < target_overflow || TMR2 < target_timer) {
         //increase the counter when interrupt flag activates (because of an overflow)

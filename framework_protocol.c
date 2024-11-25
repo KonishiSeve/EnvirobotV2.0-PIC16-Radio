@@ -81,7 +81,7 @@ void framework_decode(uint8_t* buffer, uint8_t buffer_len, reg_op* reg_op_buffer
     //retrieve register size
     reg_op_buffer->size = buffer_len - 8;
     //retrieve the register address
-    reg_op_buffer->address = (buffer[4]&0b11111)<<8;
+    reg_op_buffer->address = (uint16_t)(buffer[4]&0b11111)<<8;
     reg_op_buffer->address |= buffer[5];
     //retrieve the register value
     for(uint8_t i=0;i<reg_op_buffer->size;i++) {
