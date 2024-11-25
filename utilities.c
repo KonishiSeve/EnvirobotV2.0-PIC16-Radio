@@ -6,12 +6,12 @@
 
 // ====== LED ===== //
 void led_init(void) {
-    TRISA5 = 0;
-    RA5 = 0;
+    TRISAbits.TRISA5 = 0;
+    PORTAbits.RA5 = 0;
 }
 
 void led_state(uint8_t state) {
-    RA5 = state;
+    PORTAbits.RA5 = state&1;
 }
 
 // ===== TIME ===== //

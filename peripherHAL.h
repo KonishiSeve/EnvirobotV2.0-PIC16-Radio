@@ -19,6 +19,7 @@ uint8_t spi_xfer(uint8_t data);
 // ===== UART ===== //
 void uart_init(void);
 void uart_write(uint8_t data);
+void uart_write_buffer(uint8_t* data, uint8_t data_len);
 uint8_t uart_read(void);
 
 // ===== EEPROM ===== //

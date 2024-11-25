@@ -20,7 +20,7 @@
 
 void nrf905_setup(void);
 uint8_t nrf905_test(void);
-void nrf905_send(uint8_t* payload);
+void nrf905_send(uint8_t* payload, uint8_t payload_len);
 void nrf905_set_mode(uint8_t mode);
 void nrf905_receive(uint8_t* payload);
 
