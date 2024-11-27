@@ -25,6 +25,7 @@ uint8_t uart_read(void);
 // ===== EEPROM ===== //
 void eeprom_write(uint8_t address, uint8_t data);
 uint8_t eeprom_read(uint8_t address);
+void eeprom_read_buffer(uint8_t* buffer, uint8_t address_base, uint8_t length);
 
 // ===== ADC ====== //
 void adc_disable(void);

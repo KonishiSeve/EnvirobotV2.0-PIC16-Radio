@@ -104,6 +104,12 @@ uint8_t eeprom_read(uint8_t address) {
     return EEDATA;
 }
 
+void eeprom_read_buffer(uint8_t* buffer, uint8_t address_base, uint8_t length) {
+    for(uint8_t i=0;i<length;i++) {
+        buffer[i] = eeprom_read(address_base+i);
+    }
+}
+
 // ================ //
 // ===== ADC ====== //
 // ================ //
