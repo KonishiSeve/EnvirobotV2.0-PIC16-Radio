@@ -138,4 +138,5 @@ void nrf905_receive(uint8_t* payload) {
         payload[i] = spi_xfer(DUMMY_BYTE);
     }
     spi_cs(1);
+    nrf905_set_mode(NRF905_MODE_RX);
 }

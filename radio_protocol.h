@@ -12,6 +12,6 @@
 #include "utilities.h"
 
 void radio_decode(uint8_t* buffer, uint8_t size, reg_op* reg_op_buffer);
-
+void radio_send(reg_op* reg_op_buffer);
 #endif	/* RADIO_PROTOCOL_H */
 

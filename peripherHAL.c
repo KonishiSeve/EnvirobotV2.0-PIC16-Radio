@@ -81,7 +81,7 @@ uint8_t uart_read(void) {
 // ================== //
 
 void eeprom_write(uint8_t address, uint8_t value) {
-    while(EECON1bits.WR)    //wait for current write to finish if any
+    while(EECON1bits.WR);    //wait for last write to finish if any
     EEADR = address;
     EEDATA = value;
     EECON1bits.EEPGD = 0;   //access data memory

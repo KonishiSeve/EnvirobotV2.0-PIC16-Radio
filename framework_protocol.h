@@ -17,7 +17,7 @@ uint8_t framework_checksum(uint8_t* buffer, uint8_t buffer_len);
 uint8_t framework_verify(uint8_t* buffer, uint8_t buffer_len);
 void framework_encode(uint8_t* buffer, uint8_t* buffer_len, reg_op* reg_op_buffer);
 void framework_decode(uint8_t* buffer, uint8_t buffer_len, reg_op* reg_op_buffer);
-
+void framework_send(reg_op* reg_op_buffer);
 /*
 void framework_encode(uint8_t* buffer, uint8_t buffer_len, reg_op reg_op_buffer);
 

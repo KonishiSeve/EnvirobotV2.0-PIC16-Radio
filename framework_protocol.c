@@ -1,4 +1,5 @@
 #include "framework_protocol.h"
+#include "peripherHAL.h"
 
 #define PAYLOAD_TYPE_WREQ    0b01000000
 #define PAYLOAD_TYPE_RREQ    0b01100000
@@ -29,6 +30,42 @@ uint8_t framework_verify(uint8_t* buffer, uint8_t buffer_len) {
     return 0;
 }
 
+void framework_send(reg_op* reg_op_buffer) {
+    //start bytes
+    uart_write(0xC3);
+    uart_write(0x3C);
+    //source address
+    uart_write(PIC_ADDRESS);
+    uint8_t checksum = (uint8_t)(0xC3 + 0x3C + PIC_ADDRESS);
+    if(reg_op_buffer->type == REG_OP_READ_REQ) {
+        //payload length
+        uart_write(2); //2 bytes for register address and operation bits
+        checksum += 2;
+        uart_write(PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0x0b11111));
+        checksum += PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0x0b11111);
+        uart_write(reg_op_buffer->address&0xFF);
+        checksum += reg_op_buffer->address&0xFF;
+    }
+    else if(reg_op_buffer->type == REG_OP_WRITE_REQ) {
+        uart_write(reg_op_buffer->size + 2); //2 bytes for register address and operation bits
+        checksum += reg_op_buffer->size + 2;
+        uart_write(PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0x0b11111));
+        checksum += PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0x0b11111);
+        uart_write(reg_op_buffer->address&0xFF);
+        checksum += reg_op_buffer->address&0xFF;
+        //payload body
+        for(uint8_t i=0;i<reg_op_buffer->size;i++) {
+            uart_write(reg_op_buffer->value[reg_op_buffer->size - i - 1]);
+            checksum += reg_op_buffer->value[reg_op_buffer->size - i - 1];
+        }
+        checksum = (~checksum)+1;   //two's complement
+        uart_write(checksum);
+        //stop byte
+        uart_write(0xFF);
+    }
+}
+
+/*
 //register operation --> UART buffer
 void framework_encode(uint8_t* buffer, uint8_t* buffer_len, reg_op* reg_op_buffer) {
     //start bytes
@@ -59,6 +96,7 @@ void framework_encode(uint8_t* buffer, uint8_t* buffer_len, reg_op* reg_op_buffe
     //stop byte
     buffer[*buffer_len-1] = 0xFF;
 }
+ * */
 
 //UART buffer --> register operation
 void framework_decode(uint8_t* buffer, uint8_t buffer_len, reg_op* reg_op_buffer) {

@@ -1,5 +1,6 @@
 #include "radio_protocol.h"
 #include "utilities.h"
+#include "nrf905.h"
 
 //convert a NRF905 payload to the reg_op (register operation) structure
 void radio_decode(uint8_t* buffer, uint8_t size, reg_op* reg_op_buffer) {
@@ -39,4 +40,9 @@ void radio_decode(uint8_t* buffer, uint8_t size, reg_op* reg_op_buffer) {
             reg_op_buffer->value[i] = buffer[buffer_shift + i];
         }
     }
+}
+
+//Only used to send responses to requests
+void radio_send(reg_op* reg_op_buffer) {
+    nrf905_send(reg_op_buffer->value, reg_op_buffer->size);
 }
