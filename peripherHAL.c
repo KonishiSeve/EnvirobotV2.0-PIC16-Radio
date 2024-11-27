@@ -37,7 +37,7 @@ void uart_init(void) {
     TRISCbits.TRISC7 = 1;   //set RC7 to allow the UART peripheral to use it
     
     //baudrate configuration
-    SPBRG = 10;          //clock division to have a 57600 baudrate (actually 56818 but close enough)
+    SPBRG = 10;          //clock division to have a 57600 baudrate (actually 56818 but close enough, the STM32 head baudrate for the radio UART was set to 56800)
     TXSTAbits.BRGH = 1; //select baud rate as FOSC/(16(SPBRG + 1)) with FOSC = 10MHz
     
     //TX configuration
@@ -80,6 +80,29 @@ uint8_t uart_read(void) {
 // ===== EEPROM ===== //
 // ================== //
 
+void eeprom_write(uint8_t address, uint8_t value) {
+    while(EECON1bits.WR)    //wait for current write to finish if any
+    EEADR = address;
+    EEDATA = value;
+    EECON1bits.EEPGD = 0;   //access data memory
+    EECON1bits.WREN = 1;    //enable writting to the EEPROM
+    INTCONbits.GIE = 0; //disable interrupts
+    
+    //sequence to start an eeprom write
+    EECON2 = 0x55;
+    EECON2 = 0xAA;
+    EECON1bits.WR = 1;   //start a write operation
+    
+    INTCONbits.GIE = 1;  //enable interrupts
+    EECON1bits.WREN = 0; //disable writting to the EEPROM
+}
+
+uint8_t eeprom_read(uint8_t address) {
+    EEADR = address;
+    EECON1bits.EEPGD = 0;   //access data memory
+    EECON1bits.RD = 1;  //start reading operation
+    return EEDATA;
+}
 
 // ================ //
 // ===== ADC ====== //

@@ -84,6 +84,15 @@ void nrf905_setup(void) {
     nrf905_set_mode(NRF905_MODE_RX);
 }
 
+void nrf905_set_channel(uint8_t channel) {
+    nrf905_set_mode(NRF905_MODE_STANDBY_RX);
+    spi_cs(0);
+    spi_xfer(W_CONFIG | 0);
+    spi_xfer(channel);
+    spi_cs(1);
+    nrf905_set_mode(NRF905_MODE_RX);
+}
+
 //sets the power mode of the NRF905
 void nrf905_set_mode(uint8_t mode) {
     PIN_PWR_UP = (mode>>2) & 1;

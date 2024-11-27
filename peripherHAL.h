@@ -23,7 +23,6 @@ void uart_write_buffer(uint8_t* data, uint8_t data_len);
 uint8_t uart_read(void);
 
 // ===== EEPROM ===== //
-void eeprom_init(void);
 void eeprom_write(uint8_t address, uint8_t data);
 uint8_t eeprom_read(uint8_t address);
 

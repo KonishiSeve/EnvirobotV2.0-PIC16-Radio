@@ -1,8 +1,8 @@
 /* 
  * File:   utilities.h
- * Author: skonishi
+ * Author: Séverin Konishi
  *
- * Created on 21. novembre 2024, 10:50
+ * Created on 21. november 2024, 10:50
  */
 
 #ifndef UTILITIES_H
@@ -17,7 +17,7 @@ void led_state(uint8_t state);
 void delay_us(uint32_t delay_us);
 
 
-// ===== REGISTER ===== //
+// ===== REGISTER OPERATIONS ===== //
 typedef enum reg_op_types {
     REG_OP_READ_REQ,
     REG_OP_READ_RES,
@@ -25,6 +25,8 @@ typedef enum reg_op_types {
     REG_OP_WRITE_RES
 } reg_op_types;
 
+//structure containing the informations of a register operation (request or response to a request)
+//used to store the informations while translating a request/response from/to the framework protocol to/from the radio protocol
 typedef struct reg_op {
     reg_op_types type;
     uint16_t address;
