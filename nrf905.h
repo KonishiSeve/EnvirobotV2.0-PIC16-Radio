@@ -18,10 +18,10 @@
 #define NRF905_MODE_RX          (0b110)
 #define NRF905_MODE_TX          (0b111)
 
-void nrf905_setup(void);
+void nrf905_setup(uint8_t channel);
 uint8_t nrf905_test(void);
 void nrf905_send(uint8_t* payload, uint8_t payload_len);
-void nrf905_set_mode(uint8_t mode);
+//void nrf905_set_mode(uint8_t mode);
 void nrf905_set_channel(uint8_t channel);
 void nrf905_receive(uint8_t* payload);
 

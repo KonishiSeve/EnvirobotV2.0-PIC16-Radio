@@ -26,8 +26,6 @@
 
 #define INDIRECT_MAPPINGS_MAX   20
 
-//#define DEBUG
-
 #include <xc.h>
 #include "nrf905.h"
 #include "utilities.h"
@@ -63,12 +61,6 @@ uint16_t reg_indirect_len = 0;
 
 uint8_t error_state = ERROR_OK;
 
-//RADIO REMOTE DEBUG
-#ifdef DEBUG
-uint32_t history[20];
-uint8_t history_counter = 0;
-uint8_t debug_counter = 0;
-#endif
 
 // === Main ISR === //
 void __interrupt() main_isr(void) {
@@ -216,13 +208,6 @@ void indirect_register_access(reg_op* register_operation) {
 // ===== Radio Handler ===== //
 //called when a request is received from the radio
 void handler_radio(void) {
-    //Radio logging
-#ifdef DEBUG
-    uint32_t temp = radio_buffer_rx[0];
-    uint32_t temp2 = radio_buffer_rx[1];
-    uint32_t temp3 = radio_buffer_rx[2];
-    history[history_counter++] = temp<<16 | temp2<<8 | temp3;
-#endif
     //decode the radio packet
     reg_op register_operation;
     radio_decode(radio_buffer_rx, NRF905_PACKET_LENGTH, &register_operation);
@@ -244,107 +229,6 @@ void handler_radio(void) {
         radio_send(&register_operation);
         return;
     }
-    // == Indirect address register operation === //
-    else {
-        //save to later know what response to expect from the STM32
-        reg_op_types radio_request_type = register_operation.type;
-        //determines which operation should be done on the STM32
-        indirect_register_access(&register_operation);
-        if(error_state != ERROR_OK) {
-            return;
-        }
-        //send the operation to the STM32
-        framework_send(&register_operation);
-        uart_flag_rx = 0;
-        //wait for the STM32 response
-        while(!uart_flag_rx);
-        //verify the packet integrity
-        if(!framework_verify(uart_buffer_rx, uart_buffer_rx_len)) {
-            error_state = ERROR_REG_STM32;
-            return;
-        }
-        //decode the framework response packet
-        framework_decode(uart_buffer_rx, uart_buffer_rx_len, &register_operation);
-        uart_flag_rx = 0;   //reset the UART flag
-        //send back a response to the radio and check the response packet
-        if(radio_request_type == REG_OP_READ_REQ && register_operation.type == REG_OP_READ_RES) {
-            radio_send(&register_operation);
-        }
-        else if(radio_request_type == REG_OP_WRITE_REQ && register_operation.type == REG_OP_WRITE_RES) {
-            radio_send(&register_operation);
-        }
-        //STM32 response not valid
-        else {
-            error_state = ERROR_REG_STM32;
-        }
-    }
-    
-    /*
-    //local PIC register
-    if(register_operation_rx.address >= 0x3E0) {
-        if(register_operation_rx.type == REG_OP_READ_REQ) {
-            if(register_operation_rx.size == 1) {
-                radio_register_read_byte(register_operation_rx.address);
-            }
-        }
-        nrf905_send(register_operation_tx.value, register_operation_tx.size);
-    }
-    //indirect STM32 register
-    
-    //Radio Remote Hacking
-    else if (register_operation_rx.address <= 0xFF) {
-        static radio_hack_0 = 7;
-        if(register_operation_rx.address == 0x00) { //mode
-            if(register_operation_rx.type==REG_OP_READ_REQ) {
-                register_operation_tx.size = 1;
-                register_operation_tx.value[0] = radio_hack_0;
-            }
-            else {
-                if(radio_hack_0 == 1) {
-                    radio_hack_0 = 0;
-                }
-                else if(radio_hack_0 == 0) {
-                    radio_hack_0 = 3;
-                }
-            }
-        }
-        else if(register_operation_rx.address == 0x01 && register_operation_rx.type==REG_OP_READ_REQ) {    //number of elements
-            register_operation_tx.size = 1;
-            register_operation_tx.value[0] = 4;
-        }
-        else {
-            register_operation_tx.size = 4;
-        }
-        
-        nrf905_send(register_operation_tx.value, register_operation_tx.size);
-    }
-    else {
-        //encode the register operation to a UART packet for the framework
-        framework_encode(uart_buffer_tx, &uart_buffer_tx_len, &register_operation_rx);
-        //send the packet to the STM32
-        uart_write_buffer(uart_buffer_tx, uart_buffer_tx_len);
-        //wait for the STM32 response
-        while(!uart_flag_rx);
-        //verify the packet integrity
-        if(!framework_verify(uart_buffer_rx, uart_buffer_rx_len)) {
-            error_state = 1;
-            return;
-        }
-        //decode the framework response packet
-        framework_decode(uart_buffer_rx, uart_buffer_rx_len, &register_operation_tx);
-        uart_flag_rx = 0;   //reset the UART flag
-        //send back a response to the radio and check the response packet
-        if(register_operation_rx.type == REG_OP_READ_REQ && register_operation_tx.type == REG_OP_READ_RES) {
-            nrf905_send(register_operation_tx.value, register_operation_tx.size);
-        }
-        else if(register_operation_rx.type == REG_OP_WRITE_REQ && register_operation_tx.type == REG_OP_WRITE_RES) {
-            nrf905_send(register_operation_tx.value, register_operation_tx.size);
-        }
-        //STM32 response not valid
-        else {
-            error_state = 1;
-        }
-    }*/
 }
 
 void main(void) {
@@ -366,8 +250,8 @@ void main(void) {
     if(!nrf905_test()) {
         error_state = ERROR_SETUP;
     }
-    nrf905_setup();
-    nrf905_set_channel(81);
+    nrf905_setup(81);
+    //nrf905_set_channel(81);
     while(1) {
         //wait for a packet from the radio
         while(error_state==ERROR_OK) {
@@ -375,10 +259,7 @@ void main(void) {
                 led_state(0);
             }
             led_state(1);
-            //handler_radio();
-            uint8_t test = 45;
-            nrf905_send(&test, 1);
-            radio_flag_rx = 0;
+            handler_radio();
         }
 
         //show the error code 10 times
