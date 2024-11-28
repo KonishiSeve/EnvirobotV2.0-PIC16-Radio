@@ -1,10 +1,10 @@
 /*
  * File:   main.c
- * Author: skonishi
+ * Author: Séverin Konishi
  *
- * Created on 15. novembre 2024, 16:23
+ * Created on 15. november 2024, 16:23
  */
-// CONFIG
+// === CONFIGURATION BITS === //
 #pragma config FOSC = HS        // Oscillator Selection bits (HS oscillator)
 #pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT disabled)
 #pragma config PWRTE = ON      // Power-up Timer Enable bit (PWRT disabled)
@@ -14,6 +14,16 @@
 #pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
 #pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
 
+// === INCLUDES === //
+#include <xc.h>
+#include "nrf905.h"
+#include "utilities.h"
+#include "peripherHAL.h"
+#include "framework_protocol.h"
+#include "radio_protocol.h"
+
+// === DEFINES === //
+//version number stored in register 0x3E0
 #define VERSION         0x49
 #define PIC_REG_BASE    0x3E0
 
@@ -24,14 +34,9 @@
 //where the mappings storage starts (4 bytes per mapping)
 #define EEPROM_ADDR_MAP_BASE    0x10
 
-#define INDIRECT_MAPPINGS_MAX   20
+#define INDIRECT_MAPPINGS_MAX   50
 
-#include <xc.h>
-#include "nrf905.h"
-#include "utilities.h"
-#include "peripherHAL.h"
-#include "framework_protocol.h"
-#include "radio_protocol.h"
+
 
 
 // === Global Variables === //
