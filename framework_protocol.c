@@ -41,16 +41,18 @@ void framework_send(reg_op* reg_op_buffer) {
         //payload length
         uart_write(2); //2 bytes for register address and operation bits
         checksum += 2;
-        uart_write(PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0x0b11111));
-        checksum += PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0x0b11111);
+        volatile uint16_t value = (reg_op_buffer->address>>8);
+        volatile uint16_t value2 = ((reg_op_buffer->address)>>8);
+        uart_write(PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0b11111));
+        checksum += PAYLOAD_TYPE_RREQ | ((reg_op_buffer->address>>8)&0b11111);
         uart_write(reg_op_buffer->address&0xFF);
         checksum += reg_op_buffer->address&0xFF;
     }
     else if(reg_op_buffer->type == REG_OP_WRITE_REQ) {
         uart_write(reg_op_buffer->size + 2); //2 bytes for register address and operation bits
         checksum += reg_op_buffer->size + 2;
-        uart_write(PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0x0b11111));
-        checksum += PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0x0b11111);
+        uart_write(PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0b11111));
+        checksum += PAYLOAD_TYPE_WREQ | ((reg_op_buffer->address>>8)&0b11111);
         uart_write(reg_op_buffer->address&0xFF);
         checksum += reg_op_buffer->address&0xFF;
         //payload body

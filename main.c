@@ -66,6 +66,9 @@ uint16_t reg_indirect_len = 0;
 
 uint8_t error_state = ERROR_OK;
 
+uint8_t debug[64] = {0xFF};
+uint8_t debug_counter = 0;
+
 
 // === Main ISR === //
 void __interrupt() main_isr(void) {
@@ -207,7 +210,7 @@ void indirect_register_access(reg_op* register_operation) {
         }
     }
     //no mapping found
-    error_state = ERROR_REG_MAP;
+    //error_state = ERROR_REG_MAP;
 }
 
 // ===== Radio Handler ===== //
@@ -238,6 +241,12 @@ void handler_radio(void) {
     else {
         //save to later know what response to expect from the STM32
         reg_op_types radio_request_type = register_operation.type;
+        if(register_operation.address < 63) {
+            debug[register_operation.address] = 0xAA;
+        }
+        else {
+            debug[63] = 0xBB;
+        }
         //determines which operation should be done on the STM32
         indirect_register_access(&register_operation);
         if(error_state != ERROR_OK) {
@@ -265,7 +274,7 @@ void handler_radio(void) {
         }
         //STM32 response not valid
         else {
-            error_state = ERROR_REG_STM32;
+            //error_state = ERROR_REG_STM32;
         }
     }
 }
