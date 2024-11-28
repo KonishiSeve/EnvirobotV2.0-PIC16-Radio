@@ -306,6 +306,7 @@ void main(void) {
             delay_us(1000000);
         }
         error_state = ERROR_OK;
+        radio_flag_rx = 0;
     }
     return;
 }

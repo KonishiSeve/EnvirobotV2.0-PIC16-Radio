@@ -58,11 +58,11 @@ void framework_send(reg_op* reg_op_buffer) {
             uart_write(reg_op_buffer->value[reg_op_buffer->size - i - 1]);
             checksum += reg_op_buffer->value[reg_op_buffer->size - i - 1];
         }
-        checksum = (~checksum)+1;   //two's complement
-        uart_write(checksum);
-        //stop byte
-        uart_write(0xFF);
     }
+    checksum = (~checksum)+1;   //two's complement
+    uart_write(checksum);
+    //stop byte
+    uart_write(0xFF);
 }
 
 /*
