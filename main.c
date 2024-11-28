@@ -229,6 +229,40 @@ void handler_radio(void) {
         radio_send(&register_operation);
         return;
     }
+    // == Indirect address register operation === //
+    else {
+        //save to later know what response to expect from the STM32
+        reg_op_types radio_request_type = register_operation.type;
+        //determines which operation should be done on the STM32
+        indirect_register_access(&register_operation);
+        if(error_state != ERROR_OK) {
+            return;
+        }
+        //send the operation to the STM32
+        framework_send(&register_operation);
+        uart_flag_rx = 0;
+        //wait for the STM32 response
+        while(!uart_flag_rx);
+        //verify the packet integrity
+        if(!framework_verify(uart_buffer_rx, uart_buffer_rx_len)) {
+            error_state = ERROR_REG_STM32;
+            return;
+        }
+        //decode the framework response packet
+        framework_decode(uart_buffer_rx, uart_buffer_rx_len, &register_operation);
+        uart_flag_rx = 0;   //reset the UART flag
+        //send back a response to the radio and check the response packet
+        if(radio_request_type == REG_OP_READ_REQ && register_operation.type == REG_OP_READ_RES) {
+            radio_send(&register_operation);
+        }
+        else if(radio_request_type == REG_OP_WRITE_REQ && register_operation.type == REG_OP_WRITE_RES) {
+            radio_send(&register_operation);
+        }
+        //STM32 response not valid
+        else {
+            error_state = ERROR_REG_STM32;
+        }
+    }
 }
 
 void main(void) {
@@ -238,20 +272,17 @@ void main(void) {
     uart_init();
     led_init();
     
-    //Reinitialize the EEPROM because it was reset by the PICKit
-    /*
+    //Reinitialize the EEPROM because it was reset by the PICKit4
     if(eeprom_read(EEPROM_ADDR_CHANNEL) == 0xFF && eeprom_read(EEPROM_ADDR_MAP_NB) == 0xFF) {
         eeprom_write(EEPROM_ADDR_CHANNEL, 81);
         eeprom_write(EEPROM_ADDR_MAP_NB, 0);
     }
-    */
     
     //check that the NRF905 is connected correctly
     if(!nrf905_test()) {
         error_state = ERROR_SETUP;
     }
     nrf905_setup(81);
-    //nrf905_set_channel(81);
     while(1) {
         //wait for a packet from the radio
         while(error_state==ERROR_OK) {
