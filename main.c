@@ -66,7 +66,7 @@ uint16_t reg_indirect_len = 0;
 
 uint8_t error_state = ERROR_OK;
 
-uint8_t debug[64] = {0xFF};
+uint8_t debug[64] = {0};
 uint8_t debug_counter = 0;
 
 
@@ -192,7 +192,7 @@ void pic_register_write(reg_op* register_operation) {
 
 
 // ===== Indirect registers ===== //
-void indirect_register_access(reg_op* register_operation) {
+uint8_t indirect_register_access(reg_op* register_operation) {
     uint8_t mappings_nb = eeprom_read(EEPROM_ADDR_MAP_NB);
     uint8_t eeprom_readings[4];
     for(uint8_t i=0;i<mappings_nb;i++) {
@@ -206,11 +206,12 @@ void indirect_register_access(reg_op* register_operation) {
         if((register_operation->address >= mapping_radio_addr) && (register_operation->address < mapping_radio_addr+mapping_length)) {
             uint16_t mapping_framework_addr = (uint16_t)((eeprom_readings[2]&0b11111)<<8) | (uint16_t)(eeprom_readings[3]);
             register_operation->address = mapping_framework_addr + (register_operation->address - mapping_radio_addr);
-            return;
+            return 1;
         }
     }
     //no mapping found
     //error_state = ERROR_REG_MAP;
+    return 0;
 }
 
 // ===== Radio Handler ===== //
@@ -242,14 +243,13 @@ void handler_radio(void) {
         //save to later know what response to expect from the STM32
         reg_op_types radio_request_type = register_operation.type;
         if(register_operation.address < 63) {
-            debug[register_operation.address] = 0xAA;
+            debug[register_operation.address] += 1;
         }
         else {
             debug[63] = 0xBB;
         }
         //determines which operation should be done on the STM32
-        indirect_register_access(&register_operation);
-        if(error_state != ERROR_OK) {
+        if(!indirect_register_access(&register_operation)) {
             return;
         }
         //send the operation to the STM32
@@ -286,17 +286,21 @@ void main(void) {
     uart_init();
     led_init();
     
-    //Reinitialize the EEPROM because it was reset by the PICKit4
-    if(eeprom_read(EEPROM_ADDR_CHANNEL) == 0xFF && eeprom_read(EEPROM_ADDR_MAP_NB) == 0xFF) {
-        eeprom_write(EEPROM_ADDR_CHANNEL, 81);
-        eeprom_write(EEPROM_ADDR_MAP_NB, 0);
-    }
-    
     //check that the NRF905 is connected correctly
     if(!nrf905_test()) {
         error_state = ERROR_SETUP;
     }
-    nrf905_setup(81);
+    
+    //Reinitialize the EEPROM because it was reset by the PICKit4
+    if(eeprom_read(EEPROM_ADDR_CHANNEL) == 0xFF && eeprom_read(EEPROM_ADDR_MAP_NB) == 0xFF) {
+        eeprom_write(EEPROM_ADDR_CHANNEL, 81);  //default channel to 81
+        eeprom_write(EEPROM_ADDR_MAP_NB, 0);    //reset the indirect address mappings
+        nrf905_setup(81);
+    }
+    else {
+        nrf905_setup(eeprom_read(EEPROM_ADDR_CHANNEL));
+    }
+    
     while(1) {
         //wait for a packet from the radio
         while(error_state==ERROR_OK) {

@@ -2,7 +2,7 @@
 #include "peripherHAL.h"
 #include "utilities.h"
 
-//Pins for the radio
+// == Pins for the radio == //
 //PWR_UP pin
 #define TRIS_PWR_UP (TRISA4)
 #define PIN_PWR_UP (RA4)
@@ -22,20 +22,20 @@
 #define TRIS_CD (TRISB2)
 #define PIN_CD  (RB2)
 
-//defines for the NRF905 SPI operations
+// == defines for the NRF905 SPI operations == //
 #define W_CONFIG        (0b00000000)
 #define R_CONFIG        (0b00010000)
 #define W_TX_PAYLOAD    (0b00100000)
 #define R_TX_PAYLOAD    (0b00100001)
 #define W_TX_ADDRESS    (0b00100010)
 #define R_TX_ADDRESS    (0b00100011)
-#define R_RX_PAYLOAD    0x24
+#define R_RX_PAYLOAD    (0b00100100)
 #define CHANNEL_CONFIG  (0b10000000)
 
 //dummy bye to transfer when doing an SPI read only
 #define DUMMY_BYTE      (0x00)
 
-//reads the 4 bytes of the default address to check that the nrf905 is connected, should be all be 0xE7
+//reads the 4 bytes of the default address to check that the nrf905 is connected, should all be 0xE7
 uint8_t nrf905_test(void) {
     uint8_t buffer[5];
     spi_cs(0);
@@ -52,7 +52,7 @@ uint8_t nrf905_test(void) {
     return 0;
 }
 
-//configure the nrf905
+//configures the nrf905
 void nrf905_setup(uint8_t channel) {
     //setup the pins
     TRIS_PWR_UP = 0;   //PWM_UP pin as output
@@ -66,9 +66,7 @@ void nrf905_setup(uint8_t channel) {
     PIN_PWR_UP = 1;
     PIN_TRX_CE = 0;
     PIN_TX_EN = 0;
-    //wait for the nrf905 to switch to standby mode
-    delay_us(3000);
-    //nrf905_set_mode(NRF905_MODE_DOWN);  //Power down mode, to allow access to configuration registers
+    delay_us(3000); //wait for the nrf905 to switch to standby mode
    
     //setup packet length
     spi_cs(0);
@@ -88,15 +86,15 @@ void nrf905_setup(uint8_t channel) {
     PIN_PWR_UP = 1;
     PIN_TRX_CE = 1;
     PIN_TX_EN = 0;
-    delay_us(650);
-    //nrf905_set_mode(NRF905_MODE_STANDBY_RX);
+    delay_us(650);  //wait for the nrf905 to switch to RX mode
     
-    INTCONbits.INTE = 1;    //enable interrupt on DR pin
+    //enable interrupts on DR pin
+    INTCONbits.INTE = 1;
 }
 
+//change the NRF905 channel
 void nrf905_set_channel(uint8_t channel) {
-    //nrf905_set_mode(NRF905_MODE_STANDBY_RX);
-    //standby
+    //standby mode
     PIN_PWR_UP = 1;
     PIN_TRX_CE = 0;
     PIN_TX_EN = 0;
@@ -113,21 +111,12 @@ void nrf905_set_channel(uint8_t channel) {
     delay_us(650);
 }
 
-//sets the power mode of the NRF905
-/*
-void nrf905_set_mode(uint8_t mode) {
-    PIN_PWR_UP = (mode>>2) & 1;
-    PIN_TX_EN = (mode) & 1;
-    PIN_TRX_CE = (mode>>1) & 1;
-}
- * */
-
-//send a packet, the length of payload should be NRF905_PACKET_LENGTH
+//send a packet with the NRF905, the payload is 0 padded if payload_len is < NRF905_PACKET_LENGTH
 void nrf905_send(uint8_t* payload, uint8_t payload_len) {
-    //disable interrupt on DR pin
+    //disable interrupts on DR pin
     INTCONbits.INTE = 0;
-    //nrf905_set_mode(NRF905_MODE_STANDBY_TX);
-    //standby
+    
+    //standby mode
     PIN_PWR_UP = 1;
     PIN_TRX_CE = 0;
     PIN_TX_EN = 1;
@@ -146,14 +135,12 @@ void nrf905_send(uint8_t* payload, uint8_t payload_len) {
     }
     spi_cs(1);
     //Trigger the radio transmitter
-    //nrf905_set_mode(NRF905_MODE_TX);
     PIN_TRX_CE = 1;
     delay_us(20);
-    //nrf905_set_mode(NRF905_MODE_STANDBY_TX);
     PIN_TRX_CE = 0;
     //wait for packet to be sent
     while(PIN_DR == 0);
-    //nrf905_set_mode(NRF905_MODE_STANDBY_RX);
+    //switch back to RX mode (and clear the DR pin)
     PIN_TX_EN = 0;
     PIN_TRX_CE = 1;
     
@@ -163,8 +150,7 @@ void nrf905_send(uint8_t* payload, uint8_t payload_len) {
 
 //Read the RX payload of the NRF905 radio
 void nrf905_receive(uint8_t* payload) {
-    //nrf905_set_mode(NRF905_MODE_STANDBY_RX);
-    //standby
+    //standby mode
     PIN_PWR_UP = 1;
     PIN_TRX_CE = 0;
     PIN_TX_EN = 0;
@@ -175,6 +161,6 @@ void nrf905_receive(uint8_t* payload) {
         payload[i] = spi_xfer(DUMMY_BYTE);
     }
     spi_cs(1);
-    //TX
+    //RX mode
     PIN_TRX_CE = 1;
 }

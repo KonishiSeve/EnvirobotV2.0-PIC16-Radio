@@ -19,7 +19,7 @@ void spi_init(void) {
 }
 
 void spi_cs(uint8_t state) {
-    PORTCbits.RC0 = state;
+    PORTCbits.RC0 = state&1;
 }
 
 uint8_t spi_xfer(uint8_t data) {
@@ -52,7 +52,6 @@ void uart_init(void) {
     RCSTAbits.ADDEN = 0;//disable address detection
     
     //enable UART interrupts
-    //PIE1bits.TXIE = 1;  //interrupt for TX
     PIE1bits.RCIE = 1;  //interrupt for RX
     
     INTCONbits.PEIE = 1;   //enable peripheral interruptions
@@ -70,16 +69,9 @@ void uart_write_buffer(uint8_t* data, uint8_t data_len) {
     }
 }
 
-uint8_t uart_read(void) {
-    while(RCIF == 0);   //wait for packet
-    RCIF = 0;
-    return RCREG;
-}
-
 // ================== //
 // ===== EEPROM ===== //
 // ================== //
-
 void eeprom_write(uint8_t address, uint8_t value) {
     while(EECON1bits.WR);    //wait for last write to finish if any
     EEADR = address;
@@ -117,8 +109,8 @@ void eeprom_read_buffer(uint8_t* buffer, uint8_t address_base, uint8_t length) {
 //all the PORT A pins are ADC inputs by default
 //set all the ADC pins as Digital IO
 void adc_disable(void) {
-    PCFG0 = 0;
-    PCFG1 = 1;
-    PCFG2 = 1;
-    PCFG3 = 0;
+    ADCON1bits.PCFG0 = 0;
+    ADCON1bits.PCFG1 = 1;
+    ADCON1bits.PCFG2 = 1;
+    ADCON1bits.PCFG3 = 0;
 }
