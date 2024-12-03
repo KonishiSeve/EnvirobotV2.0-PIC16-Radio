@@ -63,12 +63,6 @@ void uart_write(uint8_t data) {
     TXREG = data;
 }
 
-void uart_write_buffer(uint8_t* data, uint8_t data_len) {
-    for(uint8_t i=0;i<data_len;i++) {
-        uart_write(data[i]);
-    }
-}
-
 // ================== //
 // ===== EEPROM ===== //
 // ================== //

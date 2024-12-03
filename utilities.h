@@ -15,7 +15,7 @@ void led_state(uint8_t state);
 
 // ===== TIME ===== //
 void delay_us(uint32_t delay_us);
-void delay_ms(uint32_t delay_ms);
+void delay_ms(uint16_t delay_ms);
 
 // ===== REGISTER OPERATIONS ===== //
 //max number of bytes for a register (for buffer allocation)
