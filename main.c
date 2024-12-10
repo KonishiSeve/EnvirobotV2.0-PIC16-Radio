@@ -42,7 +42,7 @@
 //maximum number of indirect mappings supported
 #define INDIRECT_MAPPINGS_MAX   0x2F
 
-#define UART_TIMEOUT            1000
+#define UART_TIMEOUT            10000
 
 
 // === Global Variables === //
@@ -85,8 +85,10 @@ uint16_t reg_map_length = 0;
 #define ERROR_GENERIC   0x01
 #define ERROR_SETUP     0x02
 #define ERROR_REG_PIC   0x03
-#define ERROR_REG_STM32 0x04
 #define ERROR_REG_MAP   0x05
+#define ERROR_STM32_TIMEOUT 0x05
+#define ERROR_STM32_CHECKSUM 0x06
+#define ERROR_STM32_RESPONSE 0x07
 uint8_t error_state = ERROR_OK;
 
 /* [DEBUG]
@@ -301,14 +303,7 @@ void handler_radio(void) {
     else {
         //save to later know what response to expect from the STM32
         reg_op_types radio_request_type = register_operation.type;
-        /*[DEBUG]
-        if(register_operation.address < 63) {
-            debug[register_operation.address] += 1;
-        }
-        else {
-            debug[63] = 0xBB;
-        }
-        */
+
         //determines which operation should be done on the STM32
         if(!indirect_register_access(&register_operation)) {
             //abort if the radio address is not mapped to an STM32 address
@@ -317,20 +312,20 @@ void handler_radio(void) {
         }
         //send the operation to the STM32
         framework_send(&register_operation);
-        uart_flag_rx = 0;
+        uart_flag_rx = 0;   //ready to receive UART packet
         //wait for the STM32 response
         uint16_t timeout = 0;
         while(!uart_flag_rx) {
             if(timeout++ > UART_TIMEOUT) {
                 //error if no STM32 response
-                error_state = ERROR_REG_STM32;
+                error_state = ERROR_STM32_TIMEOUT;
                 return;
             }
         }
         //verify the packet integrity
         if(!framework_verify(uart_buffer_rx, uart_buffer_rx_len)) {
             //error if received packet not valid
-            error_state = ERROR_REG_STM32;
+            error_state = ERROR_STM32_CHECKSUM;
             return;
         }
         //decode the framework response packet
@@ -340,11 +335,11 @@ void handler_radio(void) {
             radio_send(&register_operation);
         }
         else if(radio_request_type == REG_OP_WRITE_REQ && register_operation.type == REG_OP_WRITE_RES) {
-            //radio_send(&register_operation);
+            radio_send(&register_operation);
         }
         else {
             //STM32 response type not valid
-            error_state = ERROR_REG_STM32;
+            error_state = ERROR_STM32_RESPONSE;
             return;
         }
     }
@@ -396,6 +391,7 @@ void main(void) {
         }
         error_state = ERROR_OK;
         radio_flag_rx = 0;
+        nrf905_setup(eeprom_read(EEPROM_ADDR_CHANNEL));
     }
     return;
 }
