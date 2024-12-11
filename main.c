@@ -27,11 +27,36 @@
 //version number stored in register 0x3E0
 #define VERSION         0x49
 
+// = Error Codes = //
+#define ERROR_OK        0x00
+#define ERROR_GENERIC   0x01
+#define ERROR_SETUP     0x02
+#define ERROR_REG_PIC   0x03
+#define ERROR_REG_MAP   0x05
+#define ERROR_STM32_TIMEOUT 0x05
+#define ERROR_STM32_CHECKSUM 0x06
+#define ERROR_STM32_RESPONSE 0x07
+
+// = Register Map = //
 //where the PIC local registers start
 #define PIC_REG_BASE        0x3E0
 #define REG_PIC_VERSION     0x3E0
 #define REG_PIC_CHANNEL     0x3E1
+#define REG_PIC_RESET_STM   0x3E2
+#define REG_PIC_ERROR       0x3E3
 
+//Mapping control registers
+#define REG_MAP_STATUS      0x3F0
+#define REG_MAP_INDEX       0x3F1
+#define REG_MAP_ADDR_RADIO  0x3F2
+#define REG_MAP_ADDR_FRAME  0x3F3
+#define REG_MAP_LENGTH      0x3F4
+
+#define MAP_ERROR_ACCESS    0xEA
+#define MAP_ERROR_FULL      0xEB
+#define MAP_ERROR_INDEX     0xEC
+
+// = EEPROM Map = //
 //radio channel
 #define EEPROM_ADDR_CHANNEL     0x00
 //number of mappings registered for indirect register access
@@ -46,7 +71,7 @@
 
 
 // === Global Variables === //
-// communication with the STM32 through UART
+// = communication with the STM32 through UART = //
 uint8_t uart_counter = 0;
 uint8_t uart_buffer_rx[32];
 uint8_t uart_buffer_rx_len = 0;
@@ -54,13 +79,16 @@ uint8_t uart_buffer_rx_len = 0;
 //buffer will not be overwritten as long as it is not set to 0 by the user
 uint8_t uart_flag_rx = 0;
 
-// communication with the client through the NRF905 (with SPI)
+// = communication with the client through the NRF905 (with SPI) = //
 uint8_t radio_buffer_rx[32];
 //set to 1 when Radio packet received
 //buffer will not be overwritten as long as it is not set to 0 by the user
 uint8_t radio_flag_rx = 0;
 
-//indirect address control registers
+// = pic registers = //
+uint8_t reg_pic_error = ERROR_OK;   //contains the last error
+
+// = indirect address control registers = //
 uint8_t reg_map_status_read = 0;
 uint8_t reg_map_status_write = 0;
 uint8_t reg_map_index = 0;
@@ -69,32 +97,8 @@ uint16_t reg_map_addr_radio = 0;
 uint16_t reg_map_addr_frame = 0;
 uint16_t reg_map_length = 0;
 
-//Mapping control registers
-#define REG_MAP_STATUS      0x3F0
-#define REG_MAP_INDEX       0x3F1
-#define REG_MAP_ADDR_RADIO  0x3F2
-#define REG_MAP_ADDR_FRAME  0x3F3
-#define REG_MAP_LENGTH      0x3F4
-
-#define MAP_ERROR_ACCESS    0xEA
-#define MAP_ERROR_FULL      0xEB
-#define MAP_ERROR_INDEX     0xEC
-
-//errors
-#define ERROR_OK        0x00
-#define ERROR_GENERIC   0x01
-#define ERROR_SETUP     0x02
-#define ERROR_REG_PIC   0x03
-#define ERROR_REG_MAP   0x05
-#define ERROR_STM32_TIMEOUT 0x05
-#define ERROR_STM32_CHECKSUM 0x06
-#define ERROR_STM32_RESPONSE 0x07
+// = General = //
 uint8_t error_state = ERROR_OK;
-
-/* [DEBUG]
-uint8_t debug[64] = {0};
-uint8_t debug_counter = 0;
-*/
 
 // === Main ISR === //
 void __interrupt() main_isr(void) {
@@ -140,12 +144,18 @@ void __interrupt() main_isr(void) {
 //modifies the register_operation structure to send a response to the radio
 void pic_register_read(reg_op* register_operation) {
     switch(register_operation->address) {
+        // == PIC registers == //
         case REG_PIC_VERSION: //Version register (992 in decimal)
             register_operation->value[0] = VERSION;
             register_operation->size = 1;
             return;
         case REG_PIC_CHANNEL: //Channel register (993 in decimal)
             register_operation->value[0] = eeprom_read(EEPROM_ADDR_CHANNEL);
+            register_operation->size = 1;
+            return;
+        case REG_PIC_ERROR:
+            register_operation->value[0] = reg_pic_error;
+            reg_pic_error = ERROR_OK;
             register_operation->size = 1;
             return;
         // == Mapping Registers == //
@@ -186,10 +196,22 @@ void pic_register_read(reg_op* register_operation) {
 void pic_register_write(reg_op* register_operation) {
     uint8_t mapping_count;
     switch(register_operation->address) {
-        case 0x3E1: //Channel register (993 in decimal)
+        case REG_PIC_CHANNEL: // Radio channel register
             eeprom_write(EEPROM_ADDR_CHANNEL, register_operation->value[0]);
             nrf905_set_channel(register_operation->value[0]);
             return;
+            
+        case REG_PIC_RESET_STM:
+            if(register_operation->value[0] == 0xAA) {
+                //send a 10us low pulse on the STM32 reset pin
+                PORTAbits.RA1 = 1;
+                TRISAbits.TRISA1 = 0;
+                PORTAbits.RA1 = 0;
+                delay_us(10);
+                PORTAbits.RA1 = 1;
+                TRISAbits.TRISA1 = 1;
+                return;
+            }
         
         // === MAPPING STATUS REGISTER === //
         case REG_MAP_STATUS: //mapping status register (994 in decimal)
@@ -376,9 +398,10 @@ void main(void) {
             led_state(1);
             handler_radio();
         }
-
-        //show the error code 10 times
-        for(uint8_t i=0;i<10;i++) {
+        //put the error code in the register
+        reg_pic_error = error_state;
+        //show the error code 3 times
+        for(uint8_t i=0;i<3;i++) {
             //blink as many times as the error code value
             for(uint8_t j=0;j<error_state;j++) {
                 led_state(1);
