@@ -1,3 +1,10 @@
+/*
+ * File:   framework_protocol.c
+ * Author: Séverin Konishi
+ *
+ * Created on 15. november 2024, 16:23
+ */
+
 #include "framework_protocol.h"
 #include "peripherHAL.h"
 

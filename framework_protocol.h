@@ -1,5 +1,5 @@
 /* 
- * File:   protocols.h
+ * File:   framework_protocol.h
  * Author: Séverin Konishi
  *
  * Created on 21. november 2024, 16:51

@@ -1,3 +1,10 @@
+/*
+ * File:   nrf905.c
+ * Author: Séverin Konishi
+ *
+ * Created on 15. november 2024, 16:23
+ */
+
 #include "nrf905.h"
 #include "peripherHAL.h"
 #include "utilities.h"

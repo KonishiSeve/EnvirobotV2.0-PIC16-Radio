@@ -27,24 +27,12 @@
 //version number stored in register 0x3E0
 #define VERSION         0x49
 
-// = Error Codes = //
-#define ERROR_OK        0x00
-#define ERROR_GENERIC   0x01
-#define ERROR_SETUP     0x02
-#define ERROR_REG_PIC   0x03
-#define ERROR_REG_MAP   0x05
-#define ERROR_STM32_TIMEOUT 0x05
-#define ERROR_STM32_CHECKSUM 0x06
-#define ERROR_STM32_RESPONSE 0x07
-
 // = Register Map = //
-//where the PIC local registers start
-#define PIC_REG_BASE        0x3E0
+#define PIC_REG_BASE        0x3E0 //where the PIC local registers start
 #define REG_PIC_VERSION     0x3E0
 #define REG_PIC_CHANNEL     0x3E1
 #define REG_PIC_RESET_STM   0x3E2
 #define REG_PIC_ERROR       0x3E3
-
 //Mapping control registers
 #define REG_MAP_STATUS      0x3F0
 #define REG_MAP_INDEX       0x3F1
@@ -52,6 +40,17 @@
 #define REG_MAP_ADDR_FRAME  0x3F3
 #define REG_MAP_LENGTH      0x3F4
 
+// = General error codes = //
+#define ERROR_OK        0x00
+#define ERROR_GENERIC   0x01
+#define ERROR_SETUP     0x02
+#define ERROR_REG_PIC   0x03
+#define ERROR_REG_MAP   0x04
+#define ERROR_STM32_TIMEOUT 0x05
+#define ERROR_STM32_CHECKSUM 0x06
+#define ERROR_STM32_RESPONSE 0x07
+
+// = Mapping error codes = //
 #define MAP_ERROR_ACCESS    0xEA
 #define MAP_ERROR_FULL      0xEB
 #define MAP_ERROR_INDEX     0xEC
@@ -59,14 +58,15 @@
 // = EEPROM Map = //
 //radio channel
 #define EEPROM_ADDR_CHANNEL     0x00
-//number of mappings registered for indirect register access
+//number of mappings registered
 #define EEPROM_ADDR_MAP_NB      0x01
 //where the mappings storage starts (4 bytes per mapping)
 #define EEPROM_ADDR_MAP_BASE    0x10
 
-//maximum number of indirect mappings supported
+//maximum number of mappings supported
 #define INDIRECT_MAPPINGS_MAX   0x2F
 
+//timeout for the STM32 response
 #define UART_TIMEOUT            10000
 
 
@@ -141,15 +141,16 @@ void __interrupt() main_isr(void) {
     }
 }
 // ===== PIC registers ===== //
-//modifies the register_operation structure to send a response to the radio
+//called when the radio reads from internal PIC16 registers
+//modifies the register_operation structure to send a response back to the radio
 void pic_register_read(reg_op* register_operation) {
     switch(register_operation->address) {
         // == PIC registers == //
-        case REG_PIC_VERSION: //Version register (992 in decimal)
+        case REG_PIC_VERSION: //Version register
             register_operation->value[0] = VERSION;
             register_operation->size = 1;
             return;
-        case REG_PIC_CHANNEL: //Channel register (993 in decimal)
+        case REG_PIC_CHANNEL: //Channel register
             register_operation->value[0] = eeprom_read(EEPROM_ADDR_CHANNEL);
             register_operation->size = 1;
             return;
@@ -159,7 +160,7 @@ void pic_register_read(reg_op* register_operation) {
             register_operation->size = 1;
             return;
         // == Mapping Registers == //
-        case REG_MAP_STATUS: //mapping status register (994 in decimal)
+        case REG_MAP_STATUS: //mapping status register
             if(reg_map_status_read >= 0xE0) {
                 //return the error code once if one happened
                 register_operation->value[0] = reg_map_status_read;
@@ -175,24 +176,24 @@ void pic_register_read(reg_op* register_operation) {
             register_operation->value[0] = reg_map_index;
             register_operation->size = 1;
             return;
-        case REG_MAP_ADDR_RADIO: //mapping radio address register (995 in decimal)
+        case REG_MAP_ADDR_RADIO: //mapping radio address register
             register_operation->value[0] = reg_map_addr_radio&0xFF;
             register_operation->value[1] = reg_map_addr_radio>>8;
             register_operation->size = 2;
             return;
-        case REG_MAP_ADDR_FRAME: //mapping framework address register (996 in decimal)
+        case REG_MAP_ADDR_FRAME: //mapping framework address register
             register_operation->value[0] = reg_map_addr_frame&0xFF;
             register_operation->value[1] = reg_map_addr_frame>>8;
             register_operation->size = 2;
             return;
-        case REG_MAP_LENGTH: //mapping length register (997 in decimal)
+        case REG_MAP_LENGTH: //mapping length register
             register_operation->value[0] = reg_map_length&0xFF;
             register_operation->value[1] = reg_map_length>>8;
             register_operation->size = 2;
             return;
     }
 }
-
+//called when the radio writes to internal PIC16 registers
 void pic_register_write(reg_op* register_operation) {
     uint8_t mapping_count;
     switch(register_operation->address) {
@@ -241,6 +242,7 @@ void pic_register_write(reg_op* register_operation) {
                     reg_map_status_read = MAP_ERROR_FULL;
                     return;
                 }
+                //create new mapping
                 else {
                     reg_map_status_read = mapping_new(reg_map_addr_radio, reg_map_addr_frame, reg_map_length);
                 }
@@ -272,8 +274,9 @@ void pic_register_write(reg_op* register_operation) {
 }
 
 
-// ===== Indirect registers ===== //
+// ===== Indirect mapping registers ===== //
 //modifies the register operation structure (coming from the radio) to send it to the STM32
+//reads the mappings from the EEPROM and translate the legacy address to a framework address
 uint8_t indirect_register_access(reg_op* register_operation) {
     uint8_t mappings_nb = eeprom_read(EEPROM_ADDR_MAP_NB);
     uint8_t eeprom_readings[4];
@@ -299,7 +302,7 @@ uint8_t indirect_register_access(reg_op* register_operation) {
 //called when a request is received from the radio
 void handler_radio(void) {
     //decode the radio packet
-    reg_op register_operation;
+    reg_op register_operation;  //buffer for all the register operations that will happen (radio->PIC, PIC->STM, STM->PIC, PIC->radio)
     radio_decode(radio_buffer_rx, NRF905_PACKET_LENGTH, &register_operation);
     radio_flag_rx = 0;  //ready to read a new packet from the radio
     
@@ -330,6 +333,7 @@ void handler_radio(void) {
         if(!indirect_register_access(&register_operation)) {
             //abort if the radio address is not mapped to an STM32 address
             reg_map_status_read = MAP_ERROR_ACCESS;
+            reg_map_addr_radio = register_operation.address;
             return;
         }
         //send the operation to the STM32

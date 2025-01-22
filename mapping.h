@@ -1,8 +1,8 @@
-/* 
+/*
  * File:   mapping.h
  * Author: Séverin Konishi
  *
- * Created on 2. décember 2024, 14:21
+ * Created on 15. november 2024, 16:23
  */
 
 #ifndef MAPPING_H

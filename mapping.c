@@ -1,8 +1,16 @@
+/*
+ * File:   mapping.c
+ * Author: Séverin Konishi
+ *
+ * Created on 15. november 2024, 16:23
+ */
+
 #include "mapping.h"
 #include "peripherHAL.h"
 #define EEPROM_ADDR_MAP_NB      0x01
 #define EEPROM_ADDR_MAP_BASE    0x10
 
+//create a new mapping and return the total number of mappings
 uint8_t mapping_new(uint16_t address_radio, uint16_t address_frame, uint16_t length) {
     uint8_t mappings_nb = eeprom_read(EEPROM_ADDR_MAP_NB);
     mapping_set(mappings_nb++, address_radio, address_frame, length);
@@ -10,6 +18,7 @@ uint8_t mapping_new(uint16_t address_radio, uint16_t address_frame, uint16_t len
     return mappings_nb;
 }
 
+//reads an existing mapping
 void mapping_get(uint8_t index, uint16_t* address_radio, uint16_t* address_frame, uint16_t* length) {
     uint8_t eeprom_readings[4];
     //read a mapping from the EEPROM
@@ -22,6 +31,7 @@ void mapping_get(uint8_t index, uint16_t* address_radio, uint16_t* address_frame
     return;
 }
 
+//modifies an existing mapping
 void mapping_set(uint8_t index, uint16_t address_radio, uint16_t address_frame, uint16_t length) {
     //l:length bits, r:radio address bits, f:framework address bits -> llllllrr rrrrrrrr lllfffff ffffffff
     eeprom_write(EEPROM_ADDR_MAP_BASE + index*4, ((length>>1)&0b11111100) | ((address_radio>>8)&0b00000011));

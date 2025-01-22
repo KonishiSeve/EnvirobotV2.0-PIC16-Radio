@@ -1,3 +1,10 @@
+/*
+ * File:   peripherHAL.c
+ * Author: Séverin Konishi
+ *
+ * Created on 15. november 2024, 16:23
+ */
+
 #include "peripherHAL.h"
 
 // =============== //

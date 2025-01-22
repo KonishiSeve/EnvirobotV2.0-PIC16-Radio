@@ -1,8 +1,8 @@
-/* 
+/*
  * File:   nrf905.h
  * Author: Séverin Konishi
  *
- * Created on 20. november 2024, 10:07
+ * Created on 15. november 2024, 16:23
  */
 
 #ifndef NRF905_H

@@ -1,3 +1,10 @@
+/*
+ * File:   radio_protocol.c
+ * Author: Séverin Konishi
+ *
+ * Created on 15. november 2024, 16:23
+ */
+
 #include "radio_protocol.h"
 #include "utilities.h"
 #include "nrf905.h"
