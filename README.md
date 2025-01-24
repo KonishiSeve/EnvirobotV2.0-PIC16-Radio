@@ -5,6 +5,8 @@ This repository contains a MPLab project for the PIC16LF876A responsible of the 
 Implements a state machine waiting for incoming radio packets, translate the packet to the "framework" protocol and transmits it to the "head" STM32 of Envirobot V2.0 through UART.
 The reponse from the STM32 is translated back to "legacy" protocol and transmitted back trough the radio.
 This firmware also provides internal PIC16 register for configuration purposes.
+
+![](PICRadio20StateMachine.drawio.png)
 ### framework_protocol.c
 Provides functions to encode and decode UART packets with content defined by the "framework" protocol created by Dorian Bignet for Envirobot V2.0
 ### radio_protocol.c
